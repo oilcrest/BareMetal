@@ -6,7 +6,6 @@
 
 [![Assembly](https://img.shields.io/badge/x86--64-Assembly-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![CI](https://github.com/ReturnInfinity/BareMetal/actions/workflows/main.yml/badge.svg)](https://github.com/ReturnInfinity/BareMetal/actions/workflows/main.yml)
 
 <sub>Exokernel • 100% Assembly • Virtual/Physical</sub>
 </div>
