@@ -31,7 +31,7 @@ b_system_end:
 ; Basic
 
 b_system_timecounter:
-	;TODO
+	call [sys_timer]
 	ret
 
 b_system_free_memory:
@@ -154,7 +154,7 @@ b_system_debug_dump_rax:
 	ret
 
 b_system_delay:
-	call b_delay
+	call [sys_delay]
 	ret
 
 b_system_reset:

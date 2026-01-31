@@ -6,8 +6,11 @@
 ; =============================================================================
 
 
-; Note:	There are 1,000,000 microseconds in a second
-;	There are 1,000 milliseconds in a second
+; Note: 1,000,000,000,000,000 femtoseconds / second
+;	1,000,000,000,000 picoseconds /second
+;	1,000,000,000 nanoseconds / second
+;	1,000,000 microseconds / second
+;	1,000 milliseconds / second
 
 
 os_timer_init:
@@ -31,13 +34,15 @@ os_timer_init_phys:
 	jz os_timer_init_error
 	; Initialize the HPET
 	call init_timer_hpet
-	mov qword [sys_timer], hpet_delay
+	mov qword [sys_timer], hpet_ns
+	mov qword [sys_delay], hpet_delay
 	jmp os_timer_init_done
 
 os_timer_init_kvm:
 	; Initialize the KVM timer
 	call init_timer_kvm
-	mov qword [sys_timer], kvm_delay
+	mov qword [sys_timer], kvm_ns
+	mov qword [sys_delay], kvm_delay
 	jmp os_timer_init_done
 
 os_timer_init_error:
@@ -74,10 +79,10 @@ os_hpet_init_error:
 
 
 ; -----------------------------------------------------------------------------
-; os_hpet_us -- Get current microseconds (us) since HPET started
+; hpet_ns -- Get current nanoseconds (ns) since HPET started
 ; IN:	Nothing
-; OUT:	RAX = Time in microseconds since start
-os_hpet_us:
+; OUT:	RAX = Time in nanoseconds since start
+hpet_ns:
 	push rdx
 	push rcx
 
@@ -91,8 +96,8 @@ os_hpet_us:
 	mov ecx, [os_HPET_Frequency]
 	mul rcx				; RDX:RAX *= RCX
 
-	; Divide by # of femtoseconds in a microsecond
-	mov rcx, 1000000000
+	; Divide by # of femtoseconds in a nanoosecond
+	mov rcx, 1000000
 	div rcx				; RAX = RDX:RAX / RCX
 
 	pop rcx
@@ -198,11 +203,11 @@ init_timer_kvm_configure:
 
 
 ; -----------------------------------------------------------------------------
-; kvm_get_usec -- Returns # of microseconds elapsed since guest start
+; kvm_ns -- Returns # of nanoseconds elapsed since guest start
 ; IN:	Nothing
-; OUT:	RAX = microseconds elapsed since start
+; OUT:	RAX = nanoseconds elapsed since start
 ;	All other registers preserved
-kvm_get_usec:
+kvm_ns:
 	push r10
 	push r9
 	push rdi
@@ -211,10 +216,10 @@ kvm_get_usec:
 	push rbx
 
 	mov rdi, kvm_timer
-kvm_get_usec_wait:
+kvm_ns_wait:
 	mov r10d, [rdi]			; Get 32-bit version
 	test r10d, 1			; Check if version is odd (update in progress)
-	jnz kvm_get_usec_wait		; If so, retry
+	jnz kvm_ns_wait			; If so, retry
 
 	lfence
 
@@ -237,13 +242,13 @@ kvm_get_usec_wait:
 
 	; Apply tsc_shift
 	cmp cl, 0
-	jl kvm_get_usec_shift_right	; Signed comparison
+	jl kvm_ns_shift_right	; Signed comparison
 	shl rax, cl
-	jmp kvm_get_usec_shift_done
-kvm_get_usec_shift_right:
+	jmp kvm_ns_shift_done
+kvm_ns_shift_right:
 	neg cl				; Ex: 0xFF = tsc shift of -1
 	shr rax, cl
-kvm_get_usec_shift_done:
+kvm_ns_shift_done:
 
 	pop rcx				; Restore tsc_to_system_mul
 
@@ -260,12 +265,7 @@ kvm_get_usec_shift_done:
 	lfence
 	mov ecx, [rdi]			; Load 32-bit version
 	cmp r10d, ecx			; Compare to first version read
-	jne kvm_get_usec_wait		; If not equal then an update occured, restart
-
-	; Convert nanoseconds to microseconds
-	xor edx, edx
-	mov ecx, 1000
-	div rcx
+	jne kvm_ns_wait			; If not equal then an update occured, restart
 
 	pop rbx
 	pop rcx
@@ -284,19 +284,27 @@ kvm_get_usec_shift_done:
 ; Note:	There are 1,000,000 microseconds in a second
 ;	There are 1,000 milliseconds in a second
 kvm_delay:
+	push rdx
+	push rcx
 	push rbx
 	push rax
 
+	; Multiply time by 1000 to convert to nanoseconds
+	mov ecx, 1000
+	mul rcx				; RDX:RAX = RAX * RCX
+
 	mov rbx, rax			; Store delay in RBX
-	call kvm_get_usec
+	call kvm_ns
 	add rbx, rax			; Add elapsed time
 kvm_delay_wait:
-	call kvm_get_usec
+	call kvm_ns
 	cmp rax, rbx
 	jb kvm_delay_wait
 
 	pop rax
 	pop rbx
+	pop rcx
+	pop rdx
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -310,7 +318,7 @@ kvm_delay_wait:
 timer_delay:
 	push rax
 
-	call [sys_timer]
+	call [sys_delay]
 
 	pop rax
 	ret

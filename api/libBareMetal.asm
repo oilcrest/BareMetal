@@ -19,7 +19,7 @@ b_system		equ 0x0000000000100040	; Configure system. IN: RCX = Function, RAX = V
 
 
 ; Index for b_system calls
-TIMECOUNTER		equ 0x00
+TIMECOUNTER		equ 0x00	; Return # of nanoseconds elapsed since startup
 FREE_MEMORY		equ 0x01
 SMP_ID			equ 0x10
 SMP_NUMCORES		equ 0x11
@@ -45,7 +45,7 @@ CALLBACK_NETWORK	equ 0x61
 CALLBACK_KEYBOARD	equ 0x62
 DUMP_MEM		equ 0x70
 DUMP_RAX		equ 0x71
-DELAY			equ 0x72
+DELAY			equ 0x72	; Delay by # microseconds
 RESET			equ 0x7D
 REBOOT			equ 0x7E
 SHUTDOWN		equ 0x7F
